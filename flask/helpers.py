@@ -516,7 +516,7 @@ def find_package(import_name):
         filename = loader.get_filename(root_mod_name)
         package_path = os.path.abspath(os.path.dirname(filename))
         # package_path ends with __init__.py for a package
-        if package_path.endswith('.py'):
+        if loader.is_package(root_mod_name):
             package_path = os.path.dirname(package_path)
     else:
         # support for the interactive python shell
