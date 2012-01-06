@@ -497,13 +497,9 @@ def get_root_path(import_name):
     loader = pkgutil.get_loader(import_name)
     if loader is None:
         return os.getcwd()
-    filepath = os.path.abspath(loader.filename)
-    if loader.etc[2] == imp.PKG_DIRECTORY:
-        # import_name is for a package.
-        return filepath
-    else:
-        # import name is for a .py module.
-        return os.path.dirname(filepath)
+    filepath = os.path.abspath(loader.get_filename(import_name))
+    # filepath for import_name.py for a module, or __init__.py for a package.
+    return os.path.dirname(filepath)
 
 
 def find_package(import_name):
@@ -517,7 +513,11 @@ def find_package(import_name):
     root_mod_name = import_name.split('.')[0]
     loader = pkgutil.get_loader(root_mod_name)
     if loader is not None:
-        package_path = os.path.abspath(os.path.dirname(loader.filename))
+        filename = loader.get_filename(root_mod_name)
+        package_path = os.path.abspath(os.path.dirname(filename))
+        # package_path ends with __init__.py for a package
+        if package_path.endswith('.py'):
+            package_path = os.path.dirname(package_path)
     else:
         # support for the interactive python shell
         package_path = os.getcwd()
