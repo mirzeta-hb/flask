@@ -11,8 +11,10 @@
 
 from __future__ import with_statement
 
+import imp
 import os
 import sys
+import pkgutil
 import posixpath
 import mimetypes
 from time import time
@@ -492,14 +494,16 @@ def get_root_path(import_name):
 
     Not to be confused with the package path returned by :func:`find_package`.
     """
-    __import__(import_name)
-    try:
-        directory = os.path.dirname(sys.modules[import_name].__file__)
-        return os.path.abspath(directory)
-    except AttributeError:
-        # this is necessary in case we are running from the interactive
-        # python shell.  It will never be used for production code however
+    loader = pkgutil.get_loader(import_name)
+    if loader is None:
         return os.getcwd()
+    filepath = os.path.abspath(loader.filename)
+    if loader.etc[2] == imp.PKG_DIRECTORY:
+        # import_name is for a package.
+        return filepath
+    else:
+        # import name is for a .py module.
+        return os.path.dirname(filepath)
 
 
 def find_package(import_name):
@@ -510,16 +514,13 @@ def find_package(import_name):
     import the module.  The prefix is the path below which a UNIX like
     folder structure exists (lib, share etc.).
     """
-    __import__(import_name)
-    root_mod = sys.modules[import_name.split('.')[0]]
-    package_path = getattr(root_mod, '__file__', None)
-    if package_path is None:
+    root_mod_name = import_name.split('.')[0]
+    loader = pkgutil.get_loader(root_mod_name)
+    if loader is not None:
+        package_path = os.path.abspath(os.path.dirname(loader.filename))
+    else:
         # support for the interactive python shell
         package_path = os.getcwd()
-    else:
-        package_path = os.path.abspath(os.path.dirname(package_path))
-    if hasattr(root_mod, '__path__'):
-        package_path = os.path.dirname(package_path)
 
     # leave the egg wrapper folder or the actual .egg on the filesystem
     test_package_path = package_path
